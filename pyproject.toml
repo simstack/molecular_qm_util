@@ -1,0 +1,21 @@
+[project]
+name = "molecular_qm_util"
+version = "0.1.0"
+description = "Molecular QM Utilities"
+requires-python = ">=3.12"
+dependencies = [
+    "molecular_qm_models",
+    "pubchempy",
+    "cirpy",
+    "beautifulsoup4",
+]
+
+[tool.uv.sources]
+molecular_qm_models = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
