@@ -1,13 +1,16 @@
 import asyncio
-import shutil
-import subprocess
-import tempfile
+import os
 from pathlib import Path
 
 from simstack.models import StringData, Parameters
 from simstack.core.node import node
 from molecular_qm_models import Molecule, Atom
 from simstack.core.context import context
+
+try:
+    from openbabel import openbabel as ob
+except ImportError:
+    ob = None
 
 def _parse_xyz(xyz_text: str, *, smiles: str) -> Molecule:
     """
@@ -60,15 +63,40 @@ def _parse_xyz(xyz_text: str, *, smiles: str) -> Molecule:
 
     return new_molecule
 
+def _setup_ob_env():
+    """Ensure BABEL_DATADIR is set so Open Babel can find its data files."""
+    if os.environ.get("BABEL_DATADIR"):
+        return
 
-@node(parameters=Parameters(resource="int-nano"),force_rerun=True)
-def smiles_to_molecule(smiles: StringData,**kwargs) -> Molecule:
+    if ob is not None:
+        # Try to find data dir relative to the installed openbabel package
+        try:
+            import openbabel
+            pkg_path = Path(openbabel.__file__).parent
+            # Common path in wheels: site-packages/openbabel/bin/data
+            data_dir = pkg_path / "bin" / "data"
+            if data_dir.exists():
+                os.environ["BABEL_DATADIR"] = str(data_dir)
+                return
+            
+            # Another common path: site-packages/openbabel/data
+            data_dir = pkg_path / "data"
+            if data_dir.exists():
+                os.environ["BABEL_DATADIR"] = str(data_dir)
+                return
+        except Exception:
+            pass
+
+@node(parameters=Parameters(resource="int-nano"), force_rerun=True)
+def smiles_to_molecule(smiles: StringData, **kwargs) -> Molecule:
     """
-    Converts a SMILES string into a 3D Molecule object by invoking Open Babel's
-    `obabel` as an external command (no Python OpenBabel bindings required).
+    Converts a SMILES string into a 3D Molecule object using Open Babel's
+    Python bindings.
     """
     node_runner = kwargs.get("node_runner", None)
-    node_runner.info(f"Converting SMILES '{smiles}' to 3D coordinates")
+    if node_runner:
+        node_runner.info(f"Converting SMILES '{smiles}' to 3D coordinates")
+    
     if isinstance(smiles, StringData):
         smiles = smiles.value
     if not smiles or not str(smiles).strip():
@@ -76,71 +104,51 @@ def smiles_to_molecule(smiles: StringData,**kwargs) -> Molecule:
 
     smiles = str(smiles).strip()
 
-    #obabel = WindowsPath("C:/Program Files/OpenBabel-3.1.1") / "obabel.exe" # shutil.which("obabel")
-    obabel = shutil.which("obabel")
-    if not obabel:
-        raise RuntimeError(
-            "Could not find 'obabel' on PATH. Install Open Babel and ensure the 'obabel' "
-            "executable is available on the command line."
+    if ob is None:
+        raise ImportError(
+            "Open Babel Python bindings not found. "
+            "Please install them (e.g., pip install openbabel-wheel)."
         )
 
-    # Use temp files to avoid shell escaping issues and to keep Windows happy.
-    with tempfile.TemporaryDirectory(prefix="obabel_") as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        smi_path = tmpdir_path / "input.smi"
-        xyz_path = tmpdir_path / "output.xyz"
+    _setup_ob_env()
 
-        smi_path.write_text(smiles + "\n", encoding="utf-8")
+    # Create OBMol and OBConversion
+    mol = ob.OBMol()
+    conv = ob.OBConversion()
+    if not conv.SetInAndOutFormats("smi", "xyz"):
+        raise RuntimeError("Open Babel: SMILES or XYZ format not supported")
 
-        # Notes:
-        # - -ismi reads SMILES
-        # - -oxyz writes XYZ
-        # - --gen3d generates 3D coordinates
-        # - -h adds hydrogens
-        # - --minimize attempts a quick forcefield optimization
-        # - --ff MMFF94 prefers MMFF94 (common); if not available, obabel may fall back or fail
-        cmd = [
-            obabel,
-            "-ismi",
-            str(smi_path),
-            "-oxyz",
-            "--gen3d",
-            "-h",
-            "--minimize",
-            "--ff",
-            "MMFF94",
-            "--steps",
-            "50",
-            "-O",
-            str(xyz_path),
-        ]
+    if not conv.ReadString(mol, smiles):
+        raise RuntimeError(f"Open Babel failed to read SMILES: {smiles}")
 
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+    # Add Hydrogens
+    mol.AddHydrogens()
 
-        if proc.returncode != 0:
-            stderr = (proc.stderr or "").strip()
-            stdout = (proc.stdout or "").strip()
-            details = stderr if stderr else stdout
-            raise RuntimeError(
-                f"Open Babel (obabel) failed to convert SMILES '{smiles}'. "
-                f"Exit code: {proc.returncode}. Details: {details}"
-            )
+    # Generate 3D coordinates
+    builder = ob.OBBuilder()
+    if not builder.Build(mol):
+        raise RuntimeError(f"Open Babel failed to generate 3D coordinates for SMILES: {smiles}")
 
-        if not xyz_path.exists() or xyz_path.stat().st_size == 0:
-            stderr = (proc.stderr or "").strip()
-            stdout = (proc.stdout or "").strip()
-            raise RuntimeError(
-                f"Open Babel (obabel) produced no XYZ output for SMILES '{smiles}'. "
-                f"stdout: {stdout} stderr: {stderr}"
-            )
+    # Perform forcefield minimization
+    ff = ob.OBForceField.FindForceField("MMFF94")
+    if ff is None:
+        # Fallback to UFF if MMFF94 is missing
+        ff = ob.OBForceField.FindForceField("UFF")
+    
+    if ff is not None:
+        if ff.Setup(mol):
+            ff.SteepestDescent(50)
+            ff.GetCoordinates(mol)
+        else:
+            if node_runner:
+                node_runner.warning(f"Forcefield setup failed for SMILES '{smiles}', using 3D builder coords only.")
 
-        xyz_text = xyz_path.read_text(encoding="utf-8", errors="replace")
-        return _parse_xyz(xyz_text, smiles=smiles)
+    # Convert to XYZ text to parse via existing helper
+    xyz_text = conv.WriteString(mol)
+    if not xyz_text:
+        raise RuntimeError(f"Open Babel produced no XYZ output for SMILES '{smiles}'")
+
+    return _parse_xyz(xyz_text, smiles=smiles)
 
 async def main():
     await context.initialize()
