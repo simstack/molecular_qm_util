@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-molecular_qm_models = { workspace = true }
+molecular_qm_models = { path = "../molecular_qm_models", editable = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
