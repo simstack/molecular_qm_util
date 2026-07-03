@@ -1,3 +1,49 @@
+import sys
+import types
+
+# Monkeypatch openbabel.pybel._formatstodict to handle formats without descriptions
+# This must be done before 'from openbabel import pybel' because pybel calls it at module level.
+if "openbabel.pybel" not in sys.modules:
+    try:
+        # Create the module object but don't execute it yet
+        import importlib.util
+        spec = importlib.util.find_spec("openbabel.pybel")
+        if spec:
+            pybel_mod = importlib.util.module_from_spec(spec)
+            
+            # Define the safe version of _formatstodict
+            def _safe_formatstodict(list_in):
+                if sys.platform[:4] == "java":
+                    list_in = [list_in.get(i) for i in range(list_in.size())]
+                
+                # The problematic line in pybel.py is:
+                # broken = [x.replace("[Read-only]", "").replace("[Write-only]", "").split(" -- ") for x in list]
+                # broken = [(x, y.strip()) for x, y in broken]
+                
+                broken = [x.replace("[Read-only]", "").replace("[Write-only]", "").split(" -- ") for x in list_in]
+                result = []
+                for x in broken:
+                    if len(x) >= 2:
+                        result.append((x[0], x[1].strip()))
+                    else:
+                        result.append((x[0], ""))
+                return dict(result)
+
+            # Inject the safe version into the module before execution
+            def _safe_formatstodict_wrapper(list_in):
+                return _safe_formatstodict(list_in)
+            _safe_formatstodict_wrapper.__name__ = "_formatstodict_monkeypatched"
+            pybel_mod._formatstodict = _safe_formatstodict_wrapper
+            
+            # Add it to sys.modules so when pybel.py executes, it uses this module object
+            sys.modules["openbabel.pybel"] = pybel_mod
+            
+            # Now execute the module. When it reaches '_formatstodict', it will use the one we injected.
+            spec.loader.exec_module(pybel_mod)
+    except Exception:
+        # Fallback to normal import if anything goes wrong with the monkeypatch
+        pass
+
 from openbabel import pybel
 from molecular_qm_models import Molecule
 
