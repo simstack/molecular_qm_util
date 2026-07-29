@@ -1,7 +1,5 @@
-try:
-    from openbabel import pybel
-except ImportError:
-    import pybel
+from openbabel import openbabel as ob
+
 
 from molecular_qm_models import Molecule
 import logging
@@ -22,25 +20,38 @@ def compute_iupac_name(molecule: Molecule) -> str:
     xyz_str = "\n".join(xyz_lines)
 
     try:
-        # 2. Read into pybel
-        mol = pybel.readstring("xyz", xyz_str)
-        
-        # 3. Check if the 'name' format is supported by this OB installation
-        if "name" in pybel.outformats:
-            name = mol.write("name").strip()
-            if name:
-                return name
+        # 2. Read XYZ into an Open Babel molecule
+        conversion = ob.OBConversion()
+        if not conversion.SetInAndOutFormats("xyz", "smi"):
+            raise RuntimeError("Open Babel does not support XYZ to SMILES conversion")
 
-        # 4. Fallback: If 'name' is missing, generate SMILES and use PubChemPy
-        # (This leverages the fact that you already have pubchempy in your project)
-        import pubchempy as pcp
-        smiles = mol.write("smi").split()[0]
-        compounds = pcp.get_compounds(smiles, namespace='smiles')
-        
-        if compounds is not None and compounds[0].iupac_name:
-            return compounds[0].iupac_name
-            
-        return mol.formula # Ultimate fallback
+        ob_mol = ob.OBMol()
+        if not conversion.ReadString(ob_mol, xyz_str):
+            raise RuntimeError("Open Babel failed to read molecule from XYZ string")
+
+        # 3. Generate SMILES
+        smiles_output = conversion.WriteString(ob_mol).strip()
+        if not smiles_output:
+            raise RuntimeError("Open Babel failed to generate SMILES")
+
+        smiles = smiles_output.split()[0]
+
+        # 4. Use PubChemPy to resolve IUPAC name
+        try:
+            import pubchempy as pcp
+
+            compounds = pcp.get_compounds(smiles, namespace="smiles")
+            if compounds and compounds[0].iupac_name:
+                return compounds[0].iupac_name
+        except Exception as pubchem_error:
+            logger.warning("Could not resolve IUPAC name from PubChem: %s", pubchem_error)
+
+        # Ultimate fallback
+        formula = ob_mol.GetFormula()
+        if formula:
+            return formula
+
+        return smiles
 
     except Exception as e:
         logger.error(f"Error computing IUPAC name for {molecule.name}: {e}")
