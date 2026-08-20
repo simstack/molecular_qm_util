@@ -27,5 +27,4 @@ bypass-selection = true
 "indigo_scripts" = "molecular_qm_util/indigo_scripts"
 "obabel_scripts" = "molecular_qm_util/obabel_scripts"
 "pubchempy_scripts" = "molecular_qm_util/pubchempy_scripts"
-"pymatgen_scripts" = "molecular_qm_util/pymatgen_scripts"
 "rd_kit_scripts" = "molecular_qm_util/rd_kit_scripts"
