@@ -20,15 +20,3 @@ source = "vcs"
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
-
-# Flat repo layout: install as nested package molecular_qm_util.*.
-[tool.hatch.build.targets.wheel]
-bypass-selection = true
-
-[tool.hatch.build.targets.wheel.force-include]
-"__init__.py" = "molecular_qm_util/__init__.py"
-"data" = "molecular_qm_util/data"
-"indigo_scripts" = "molecular_qm_util/indigo_scripts"
-"obabel_scripts" = "molecular_qm_util/obabel_scripts"
-"pubchempy_scripts" = "molecular_qm_util/pubchempy_scripts"
-"rd_kit_scripts" = "molecular_qm_util/rd_kit_scripts"
