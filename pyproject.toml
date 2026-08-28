@@ -1,20 +1,23 @@
 [project]
 name = "molecular_qm_util"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Molecular QM Utilities"
 requires-python = ">=3.12"
 dependencies = [
-    "molecular_qm_models",
     "pubchempy",
     "cirpy",
     "beautifulsoup4",
+    "molecular_qm_models",
 ]
 
 [tool.uv.sources]
-molecular_qm_models = { path = "../molecular_qm_models", editable = true }
+molecular_qm_models = { git = "https://github.com/simstack/molecular_qm_models.git" }
+
+[tool.hatch.version]
+source = "vcs"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 # Flat repo layout: install as nested package molecular_qm_util.*.
