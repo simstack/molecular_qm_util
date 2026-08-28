@@ -7,6 +7,7 @@ dependencies = [
     "pubchempy",
     "cirpy",
     "beautifulsoup4",
+    "openbabel-wheel",
     "molecular_qm_models",
 ]
 
