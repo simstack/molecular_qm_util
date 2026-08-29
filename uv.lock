@@ -86,11 +86,12 @@ wheels = [
 
 [[package]]
 name = "molecular-qm-models"
-version = "0.1.0"
-source = { git = "https://github.com/simstack/molecular_qm_models.git#2f1b4687f6ff79e4dbd957cf11779f6bded071b9" }
+version = "0.2.0"
+source = { git = "https://github.com/simstack/molecular_qm_models.git#ecf27ec5040a80ccc1e0cc3f427518737aab8bdf" }
 dependencies = [
     { name = "numpy" },
     { name = "pydantic" },
+    { name = "simstack" },
 ]
 
 [[package]]
@@ -101,6 +102,7 @@ dependencies = [
     { name = "cirpy" },
     { name = "molecular-qm-models" },
     { name = "numpy" },
+    { name = "odmantic" },
     { name = "openbabel-wheel" },
     { name = "pubchempy" },
     { name = "pytest-asyncio" },
@@ -114,6 +116,7 @@ requires-dist = [
     { name = "cirpy" },
     { name = "molecular-qm-models", git = "https://github.com/simstack/molecular_qm_models.git" },
     { name = "numpy" },
+    { name = "odmantic", specifier = ">=1.1.0" },
     { name = "openbabel-wheel" },
     { name = "pubchempy" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
