@@ -1,12 +1,9 @@
-# /// script
-# dependencies = ["rdkit"]
-# ///
-
 import sys
+from rdkit import Chem
+from rdkit.Chem import AllChem
 
 def get_3d(smiles):
-    from rdkit import Chem
-    from rdkit.Chem import AllChem
+
     mol = Chem.MolFromSmiles(smiles)
     mol = Chem.AddHs(mol)
     AllChem.EmbedMolecule(mol, AllChem.ETKDG())

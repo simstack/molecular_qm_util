@@ -1,14 +1,11 @@
-# /// script
-# dependencies = ["rdkit"]
-# ///
-
 import sys
 import numpy as np
+from rdkit import Chem
+from rdkit.Chem import AllChem, rdMolTransforms
+
 
 def get_fragment_atoms(mol, bond_idx, start_atom_idx):
     """Finds all atoms on one side of a bond."""
-    from rdkit import Chem
-    from rdkit.Chem import AllChem, rdMolTransforms
 
     atoms_to_move = []
     stack = [start_atom_idx]

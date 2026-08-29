@@ -37,7 +37,7 @@ def _setup_ob_env():
         except Exception:
             pass
 
-@node(parameters=Parameters(resource="int-nano"), force_rerun=True)
+#@node(parameters=Parameters(resource="int-nano"), force_rerun=True)
 def cdx_to_molecule(cdx_file: FileStack, **kwargs) -> Molecule:
     """
     Convert a ChemDraw CDX file to a Molecule object using OpenBabel.
@@ -47,7 +47,10 @@ def cdx_to_molecule(cdx_file: FileStack, **kwargs) -> Molecule:
     """
     node_runner = kwargs.get("node_runner", None)
     
-    # FileStack.get() returns the path to the local file
+    file_name = Path(cdx_file.name)
+    if file_name.exists():
+        file_name.unlink()
+
     file_path = cdx_file.get()
     if node_runner:
         node_runner.info(f"Converting CDX file '{file_path}' to Molecule")
@@ -88,9 +91,11 @@ def cdx_to_molecule(cdx_file: FileStack, **kwargs) -> Molecule:
 async def main():
     # Example usage (requires a real .cdx file to run)
     await context.initialize()
-    # test_file = FileStack.from_local_file("path/to/your.cdx")
-    # mol = cdx_to_molecule(test_file)
-    # print(mol)
+    cdx_path = Path().cwd().parent.parent / "tests" / "data" / "benzene.cdx"
+    test_file = FileStack.from_local_file(cdx_path)
+    mol = cdx_to_molecule(test_file)
+    print(mol)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
