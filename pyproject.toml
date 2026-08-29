@@ -25,3 +25,12 @@ source = "vcs"
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+# Package only the inner module directory so the checkout-root shim __init__.py
+# is not included in the wheel.
+[tool.hatch.build.targets.wheel]
+packages = ["molecular_qm_util"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

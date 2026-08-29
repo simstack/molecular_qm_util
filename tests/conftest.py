@@ -47,7 +47,7 @@ def event_loop():
     loop.close()
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True, loop_scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def initialized_context():
     """
     Session-based async fixture that initializes the simstack context.
