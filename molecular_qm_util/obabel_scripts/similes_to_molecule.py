@@ -88,7 +88,7 @@ def _setup_ob_env():
             pass
 
 @node(parameters=Parameters(resource="int-nano"), force_rerun=True)
-def smiles_to_molecule(smiles: StringData, **kwargs) -> Molecule:
+def smiles_to_molecule_obabel(smiles: StringData, **kwargs) -> Molecule:
     """
     Converts a SMILES string into a 3D Molecule object using Open Babel's
     Python bindings.
@@ -153,7 +153,7 @@ def smiles_to_molecule(smiles: StringData, **kwargs) -> Molecule:
 async def main():
     await context.initialize()
     smiles = StringData(value="C1=CC=CC=C1")
-    mol = smiles_to_molecule(smiles)
+    mol = smiles_to_molecule_obabel(smiles)
     print(mol)
 
 if __name__ == "__main__":

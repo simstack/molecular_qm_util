@@ -7,7 +7,7 @@ from .pubchempy_scripts.compute_iupac_name import compute_iupac_name
 __all__ = ["compute_iupac_name"]
 
 try:
-    from .obabel_scripts.similes_to_molecule import smiles_to_molecule
+    from .obabel_scripts.similes_to_molecule import smiles_to_molecule_obabel
 except ImportError:
     pass
 else:
