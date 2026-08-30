@@ -10,6 +10,7 @@ from pathlib import Path
 from simstack.core.node import node
 from molecular_qm_models import Atom, Molecule, MoleculeList
 from molecular_qm_models.prune_conformers import prune_conformers
+from simstack.models import StringData
 
 from molecular_qm_util.obabel_scripts.openbabel_conformers import ConformerGenerationInput
 
@@ -68,14 +69,14 @@ def conformers_rdkit(molecule: Molecule, confgen_input: ConformerGenerationInput
 
 
 @node
-def conformers_rdkit_from_smiles(smiles: str, confgen_input: ConformerGenerationInput, **kwargs) -> MoleculeList:
+def conformers_rdkit_from_smiles(smiles: StringData, confgen_input: ConformerGenerationInput, **kwargs) -> MoleculeList:
     node_runner = kwargs["node_runner"]
     num_confs = confgen_input.num_confs
     seed = confgen_input.seed
     profile = confgen_input.profile
     from molecular_qm_util.rdkit_scripts.smiles_to_molecule import smiles_to_molecule
-    molecule = smiles_to_molecule(smiles)
-    molecule_smiles = smiles
+    molecule = smiles_to_molecule(smiles.value)
+    molecule_smiles = smiles.value
     molecule_formula = "NA"
     node_runner.info(f"Generating {num_confs} conformers for molecule {molecule_smiles} / {molecule_formula} with seed {seed}")
     return generate_rdkit_conformers(molecule, num_confs=num_confs, seed=seed, profile=profile)
