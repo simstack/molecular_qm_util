@@ -11,7 +11,7 @@ from molecular_qm_models import Atom, Molecule, MoleculeList
 from molecular_qm_models.multi_molecule_text_parser import iter_sdf_frames
 from molecular_qm_models.prune_conformers import prune_conformers
 from odmantic import Model
-from simstack.models import simstack_model
+from simstack.models import simstack_model, StringData
 
 try:
     from openbabel import openbabel as ob
@@ -111,14 +111,14 @@ def conformers_openbabel(molecule: Molecule, confgen_input: ConformerGenerationI
     return generate_openbabel_conformers(molecule,num_confs=num_confs,seed=seed,profile=profile)
 
 @node
-def conformers_openbabel_from_smiles(smiles: str, confgen_input: ConformerGenerationInput,**kwargs) -> MoleculeList:
+def conformers_openbabel_from_smiles(smiles: StringData, confgen_input: ConformerGenerationInput,**kwargs) -> MoleculeList:
     node_runner = kwargs["node_runner"]
     num_confs = confgen_input.num_confs
     seed = confgen_input.seed
     profile = confgen_input.profile
     from molecular_qm_util.rdkit_scripts.smiles_to_molecule import smiles_to_molecule
-    molecule = smiles_to_molecule(smiles)
-    molecule_smiles = smiles
+    molecule = smiles_to_molecule(smiles.value)
+    molecule_smiles = smiles.value
     molecule_formula = "NA"
 
 
