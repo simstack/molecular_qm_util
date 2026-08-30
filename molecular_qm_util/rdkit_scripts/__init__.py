@@ -14,6 +14,10 @@ from .molecule_to_smiles import (
 )
 from .rotate_bond import get_fragment_atoms, rotate_bond_rigidly
 from .smiles_to_molecule import smiles_to_molecule
+from .rdkit_optimize import (
+    rdkit_optimize,
+    RDKitForceField,
+)
 
 __all__ = [
     "get_3d",
@@ -29,4 +33,6 @@ __all__ = [
     "conformers_rdkit_from_smiles",
     "generate_rdkit_conformers",
     "generate_rdkit_conformers_from_smiles",
+    "rdkit_optimize",
+    "RDKitForceField",
 ]

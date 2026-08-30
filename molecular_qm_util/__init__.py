@@ -5,6 +5,10 @@ from .rdkit_scripts.molecule_to_smiles import (
     molecule_to_canonical_smiles,
     molecule_to_smiles,
 )
+from .rdkit_scripts.rdkit_optimize import (
+    rdkit_optimize,
+    RDKitForceField,
+)
 
 __all__ = [
     "compute_iupac_name",
@@ -12,6 +16,8 @@ __all__ = [
     "compute_smiles",
     "molecule_to_smiles",
     "molecule_to_canonical_smiles",
+    "rdkit_optimize",
+    "RDKitForceField",
 ]
 
 try:
