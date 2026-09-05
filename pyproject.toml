@@ -9,7 +9,7 @@ dependencies = [
     "beautifulsoup4",
     "openbabel-wheel",
     "molecular_qm_models",
-    "rdkit",
+    "rdkit==2024.3.2",
     "numpy",
     "simstack",
     "pytest-asyncio>=1.4.0",
