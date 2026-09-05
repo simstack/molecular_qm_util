@@ -10,6 +10,7 @@ dependencies = [
     "openbabel-wheel",
     "molecular_qm_models",
     "rdkit==2024.3.2",
+    "pillow==12.2.0",
     "numpy",
     "simstack",
     "pytest-asyncio>=1.4.0",
