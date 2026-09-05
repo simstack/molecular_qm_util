@@ -1,5 +1,5 @@
 from .generate_3d_structure_from_smiles import get_3d
-from .get_rotatable_bonds import get_rotatable_bonds
+from .get_rotatable_bonds import get_rotatable_bonds, get_rotatable_bonds_base, get_rotable_bonds
 from .rdkit_conformers import (
     ConformerGenerationInput,
     conformers_rdkit,
@@ -17,11 +17,15 @@ from .smiles_to_molecule import smiles_to_molecule
 from .rdkit_optimize import (
     rdkit_optimize,
     RDKitForceField,
+    molecule_to_rdkit,
+    rdkit_to_molecule,
 )
 
 __all__ = [
     "get_3d",
     "get_rotatable_bonds",
+    "get_rotatable_bonds_base",
+    "get_rotable_bonds",
     "get_fragment_atoms",
     "rotate_bond_rigidly",
     "smiles_to_molecule",
@@ -35,4 +39,6 @@ __all__ = [
     "generate_rdkit_conformers_from_smiles",
     "rdkit_optimize",
     "RDKitForceField",
+    "molecule_to_rdkit",
+    "rdkit_to_molecule",
 ]

@@ -8,6 +8,13 @@ from .rdkit_scripts.molecule_to_smiles import (
 from .rdkit_scripts.rdkit_optimize import (
     rdkit_optimize,
     RDKitForceField,
+    molecule_to_rdkit,
+    rdkit_to_molecule,
+)
+from .rdkit_scripts.get_rotatable_bonds import (
+    get_rotatable_bonds,
+    get_rotatable_bonds_base,
+    get_rotable_bonds,
 )
 
 __all__ = [
@@ -18,6 +25,11 @@ __all__ = [
     "molecule_to_canonical_smiles",
     "rdkit_optimize",
     "RDKitForceField",
+    "molecule_to_rdkit",
+    "rdkit_to_molecule",
+    "get_rotatable_bonds",
+    "get_rotatable_bonds_base",
+    "get_rotable_bonds",
 ]
 
 try:

@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional, Union
 
 from molecular_qm_models import Atom, Molecule
+from simstack.core.node import node
 
 
 class RDKitForceField(str, Enum):
@@ -125,23 +126,50 @@ def rdkit_to_molecule(rdkit_mol: Chem.Mol, conf_id: int = 0, energy: Optional[fl
     return mol
 
 
+class RDKitParams:
+    """
+    Parameters for RDKit optimization.
+    """
+    max_iters: int = 500
+    forcefield: Union[str, RDKitForceField] = RDKitForceField.MMFF94
+    mmff_variant: str = "MMFF94"
 
+@node
 def rdkit_optimize(
     molecule: Molecule,
-    forcefield: Union[str, RDKitForceField] = RDKitForceField.MMFF94,
-    max_iters: int = 500,
-    mmff_variant: str = "MMFF94",
+    params: RDKitParams, **kwargs
 ) -> Molecule:
     """
-    Perform geometry optimization on a Molecule using RDKit force field (MMFF94, MMFF94s, or UFF).
+    Optimizes the 3D geometry of a molecular structure using RDKit force fields.
 
-    :param molecule: The input Molecule object with 3D coordinates.
-    :param forcefield: Forcefield to use (RDKitForceField member, 'mmff', 'mmff94', 'mmff94s', or 'uff'). Defaults to MMFF94.
-    :param max_iters: Maximum number of minimization iterations. Defaults to 500.
-    :param mmff_variant: MMFF variant ('MMFF94' or 'MMFF94s'). Defaults to 'MMFF94'.
-    :return: Optimized Molecule with properties['energy'] and properties['method'].
+    This function uses RDKit's force field optimization to minimize the energy of
+    a molecular structure. It supports the MMFF94, MMFF94s, and UFF force fields
+    for geometry optimization. The optimized molecule is returned along with its
+    energy and additional metadata.
+
+    :param molecule: The molecule to be optimized. It can either be an instance of
+        `Molecule` or `rdkit.Chem.Mol`. The molecular structure must have a valid
+        3D geometry.
+    :type molecule: Molecule or Chem.Mol
+    :param params: The parameters for the RDKit optimization process, encapsulated
+        in an `RDKitParams` object. These parameters include details such as
+        force field variants and maximum iterations.
+    :type params: RDKitParams
+    :param kwargs: Additional keyword arguments for customizing the optimization
+        process or passing supplementary information.
+    :return: A new `Molecule` object representing the optimized structure. The
+        returned molecule includes updated geometry, energy value, and method used
+        for optimization.
+    :rtype: Molecule
+    :raises TypeError: If the provided molecular object is not an instance of
+        `Molecule` or `rdkit.Chem.Mol`.
+    :raises ValueError: If an unsupported force field is specified in the
+        parameters.
     """
     _require_rdkit()
+
+    forcefield = params.forcefield
+    mmff_variant = params.mmff_variant
 
     if isinstance(molecule, Molecule):
         mol = molecule_to_rdkit(molecule)
