@@ -10,6 +10,8 @@ from .rdkit_scripts.rdkit_optimize import (
     RDKitForceField,
     molecule_to_rdkit,
     rdkit_to_molecule,
+    score_molecules_rdkit,
+    optimize_molecules_rdkit,
 )
 from .rdkit_scripts.get_rotatable_bonds import (
     get_rotatable_bonds,
@@ -27,6 +29,8 @@ __all__ = [
     "RDKitForceField",
     "molecule_to_rdkit",
     "rdkit_to_molecule",
+    "score_molecules_rdkit",
+    "optimize_molecules_rdkit",
     "get_rotatable_bonds",
     "get_rotatable_bonds_base",
     "get_rotable_bonds",

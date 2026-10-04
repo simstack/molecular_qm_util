@@ -19,6 +19,8 @@ from .rdkit_optimize import (
     RDKitForceField,
     molecule_to_rdkit,
     rdkit_to_molecule,
+    score_molecules_rdkit,
+    optimize_molecules_rdkit,
 )
 
 __all__ = [
@@ -41,4 +43,6 @@ __all__ = [
     "RDKitForceField",
     "molecule_to_rdkit",
     "rdkit_to_molecule",
+    "score_molecules_rdkit",
+    "optimize_molecules_rdkit",
 ]

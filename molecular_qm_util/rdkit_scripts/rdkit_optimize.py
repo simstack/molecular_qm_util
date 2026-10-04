@@ -1,5 +1,7 @@
 from __future__ import annotations
 import copy
+from concurrent.futures import ThreadPoolExecutor
+import os
 from enum import Enum
 from typing import Optional, Union
 
@@ -134,6 +136,82 @@ class RDKitParams:
     forcefield: Union[str, RDKitForceField] = RDKitForceField.MMFF94
     mmff_variant: str = "MMFF94"
 
+
+def evaluate_molecules_rdkit(
+    molecules: list[Molecule],
+    forcefield: Union[str, RDKitForceField] = RDKitForceField.MMFF94,
+    *,
+    optimize: bool = False,
+    max_iters: int = 500,
+    threads: int = 0,
+) -> list[Molecule]:
+    """Score or optimize a batch, preserving input order and molecular metadata.
+
+    Inputs are never modified. Energies are in kcal/mol. No sorting or pruning
+    is performed, so every result corresponds to the input at the same index.
+    Missing force-field parameters are errors, never zero-energy results.
+    """
+    _require_rdkit()
+    name = forcefield.value if isinstance(forcefield, Enum) else str(forcefield)
+    name = name.lower().removeprefix("rdkit_")
+    name = "mmff94" if name == "mmff" else name
+    if name not in {field.value for field in RDKitForceField}:
+        raise ValueError(f"Unsupported force field: {forcefield!r}")
+    if max_iters < 0 or threads < 0:
+        raise ValueError("max_iters and threads must be non-negative")
+
+    def evaluate(molecule: Molecule) -> Molecule:
+        mol = molecule_to_rdkit(molecule)
+        if name == "uff":
+            if not AllChem.UFFHasAllMoleculeParams(mol):
+                raise ValueError("UFF parameters are unavailable for this molecule")
+            ff = AllChem.UFFGetMoleculeForceField(mol)
+        else:
+            variant = "MMFF94s" if name == "mmff94s" else "MMFF94"
+            props = AllChem.MMFFGetMoleculeProperties(mol, mmffVariant=variant)
+            if props is None:
+                raise ValueError(f"{variant} parameters are unavailable for this molecule")
+            ff = AllChem.MMFFGetMoleculeForceField(mol, props)
+        if ff is None:
+            raise ValueError(f"Cannot construct {name} force field")
+        ff.Initialize()
+        status = ff.Minimize(maxIts=int(max_iters)) if optimize else None
+        result = Molecule.from_molecule(molecule)
+        result.properties = copy.deepcopy(molecule.properties)
+        result.properties.pop("rank_id", None)
+        result.properties.pop("optimization_converged", None)
+        if optimize:
+            conf = mol.GetConformer()
+            for index, atom in enumerate(result.atoms):
+                pos = conf.GetAtomPosition(index)
+                atom.position = [pos.x, pos.y, pos.z]
+            result.properties["optimization_converged"] = status == 0
+        result.properties.update(
+            energy=float(ff.CalcEnergy()), energy_unit="kcal/mol", method=f"rdkit+{name}"
+        )
+        return result
+
+    if not molecules:
+        return []
+    workers = threads or max(1, (os.cpu_count() or 1) // 2)
+    with ThreadPoolExecutor(max_workers=min(workers, len(molecules))) as executor:
+        return list(executor.map(evaluate, molecules))
+
+
+def score_molecules_rdkit(molecules: list[Molecule], forcefield=RDKitForceField.MMFF94,
+                          *, threads: int = 0) -> list[Molecule]:
+    """Return copies with single-point force-field energies in kcal/mol."""
+    return evaluate_molecules_rdkit(molecules, forcefield, threads=threads)
+
+
+def optimize_molecules_rdkit(molecules: list[Molecule], forcefield=RDKitForceField.MMFF94,
+                             *, max_iters: int = 500, threads: int = 0) -> list[Molecule]:
+    """Return optimized copies with force-field energies in kcal/mol."""
+    return evaluate_molecules_rdkit(
+        molecules, forcefield, optimize=True, max_iters=max_iters, threads=threads
+    )
+
+
 @node
 def rdkit_optimize(
     molecule: Molecule,
@@ -168,6 +246,7 @@ def rdkit_optimize(
     """
     _require_rdkit()
 
+    max_iters = params.max_iters
     forcefield = params.forcefield
     mmff_variant = params.mmff_variant
 
