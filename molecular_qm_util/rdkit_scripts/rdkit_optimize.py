@@ -5,8 +5,10 @@ import os
 from enum import Enum
 from typing import Optional, Union
 
-from molecular_qm_models import Atom, Molecule
+from molecular_qm_models import Atom, Molecule, MoleculeList
+from odmantic import Model
 from simstack.core.node import node
+from simstack.models import simstack_model
 
 
 class RDKitForceField(str, Enum):
@@ -26,11 +28,6 @@ except ImportError as e:
     _RDKIT_IMPORT_ERROR = e
 else:
     _RDKIT_IMPORT_ERROR = None
-
-try:
-    from openbabel import pybel
-except ImportError:
-    pybel = None
 
 
 def _require_rdkit() -> None:
@@ -53,6 +50,11 @@ def molecule_to_rdkit(molecule: Molecule) -> Chem.Mol:
         element = str(element).strip()
         lines.append(f"{element} {atom.x:.10f} {atom.y:.10f} {atom.z:.10f}")
     xyz = "\n".join(lines) + "\n"
+
+    try:
+        from openbabel import pybel
+    except (ImportError, ValueError):
+        pybel = None
 
     # 1. Try OpenBabel if available
     if pybel is not None:
@@ -137,6 +139,25 @@ class RDKitParams:
     mmff_variant: str = "MMFF94"
 
 
+@simstack_model
+class RDKitForceFieldParams(Model):
+    """Force field and threading for an RDKit single-point batch."""
+
+    field_name: str = "RDKitForceFieldParams"
+    forcefield: RDKitForceField = RDKitForceField.MMFF94
+    threads: int = 0
+
+
+@simstack_model
+class RDKitOptimizationParams(Model):
+    """Force field, iteration limit, and threading for an RDKit optimization batch."""
+
+    field_name: str = "RDKitOptimizationParams"
+    forcefield: RDKitForceField = RDKitForceField.MMFF94
+    threads: int = 0
+    max_iters: int = 500
+
+
 def evaluate_molecules_rdkit(
     molecules: list[Molecule],
     forcefield: Union[str, RDKitForceField] = RDKitForceField.MMFF94,
@@ -198,18 +219,63 @@ def evaluate_molecules_rdkit(
         return list(executor.map(evaluate, molecules))
 
 
-def score_molecules_rdkit(molecules: list[Molecule], forcefield=RDKitForceField.MMFF94,
-                          *, threads: int = 0) -> list[Molecule]:
-    """Return copies with single-point force-field energies in kcal/mol."""
-    return evaluate_molecules_rdkit(molecules, forcefield, threads=threads)
+def _loaded_molecules(molecules: MoleculeList) -> list[Molecule]:
+    loaded = list(molecules)
+    if len(loaded) != len(molecules):
+        raise ValueError(
+            "RDKit evaluation requires a loaded MoleculeList; "
+            f"{len(loaded)} of {len(molecules)} molecules are in memory"
+        )
+    return loaded
 
 
-def optimize_molecules_rdkit(molecules: list[Molecule], forcefield=RDKitForceField.MMFF94,
-                             *, max_iters: int = 500, threads: int = 0) -> list[Molecule]:
-    """Return optimized copies with force-field energies in kcal/mol."""
-    return evaluate_molecules_rdkit(
-        molecules, forcefield, optimize=True, max_iters=max_iters, threads=threads
+def _as_molecule_list(molecules: list[Molecule]) -> MoleculeList:
+    result = MoleculeList()
+    for molecule in molecules:
+        result.add_molecule(molecule)
+    return result
+
+
+@node
+def score_molecules_rdkit(
+    molecules: MoleculeList, params: RDKitForceFieldParams, **kwargs
+) -> MoleculeList:
+    """Score a batch with an RDKit force field.
+
+    Parameters:
+        molecules (MoleculeList): Structures to score. Geometry is unchanged.
+        params (RDKitForceFieldParams): Force field and worker-thread count.
+
+    Returns:
+        MoleculeList: Copies with properties['energy'] in kcal/mol, in input order.
+    """
+    scored = evaluate_molecules_rdkit(
+        _loaded_molecules(molecules), params.forcefield, threads=params.threads
     )
+    return _as_molecule_list(scored)
+
+
+@node
+def optimize_molecules_rdkit(
+    molecules: MoleculeList, params: RDKitOptimizationParams, **kwargs
+) -> MoleculeList:
+    """Optimize a batch with an RDKit force field.
+
+    Parameters:
+        molecules (MoleculeList): Structures to optimize.
+        params (RDKitOptimizationParams): Force field, iteration limit, and worker-thread count.
+
+    Returns:
+        MoleculeList: Optimized copies with properties['energy'] in kcal/mol, in input order.
+    """
+    optimized = evaluate_molecules_rdkit(
+        _loaded_molecules(molecules),
+        params.forcefield,
+        optimize=True,
+        max_iters=params.max_iters,
+        threads=params.threads,
+    )
+    return _as_molecule_list(optimized)
 
 
 @node

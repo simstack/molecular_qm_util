@@ -8,8 +8,11 @@ from .rdkit_scripts.molecule_to_smiles import (
 from .rdkit_scripts.rdkit_optimize import (
     rdkit_optimize,
     RDKitForceField,
+    RDKitForceFieldParams,
+    RDKitOptimizationParams,
     molecule_to_rdkit,
     rdkit_to_molecule,
+    evaluate_molecules_rdkit,
     score_molecules_rdkit,
     optimize_molecules_rdkit,
 )
@@ -27,18 +30,26 @@ __all__ = [
     "molecule_to_canonical_smiles",
     "rdkit_optimize",
     "RDKitForceField",
+    "RDKitForceFieldParams",
+    "RDKitOptimizationParams",
     "molecule_to_rdkit",
     "rdkit_to_molecule",
+    "evaluate_molecules_rdkit",
     "score_molecules_rdkit",
     "optimize_molecules_rdkit",
     "get_rotatable_bonds",
     "get_rotatable_bonds_base",
     "get_rotable_bonds",
+    "smiles_to_molecule_obabel",
 ]
 
-try:
-    from .obabel_scripts.similes_to_molecule import smiles_to_molecule_obabel
-except ImportError:
-    pass
-else:
-    __all__.append("smiles_to_molecule_obabel")
+
+def __getattr__(name: str):
+    if name != "smiles_to_molecule_obabel":
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    try:
+        from .obabel_scripts.similes_to_molecule import smiles_to_molecule_obabel
+    except ImportError as exc:
+        raise AttributeError("smiles_to_molecule_obabel is unavailable") from exc
+    globals()[name] = smiles_to_molecule_obabel
+    return smiles_to_molecule_obabel

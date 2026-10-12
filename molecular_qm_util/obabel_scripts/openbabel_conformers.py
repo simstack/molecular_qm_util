@@ -13,18 +13,35 @@ from molecular_qm_models.prune_conformers import prune_conformers
 from odmantic import Model
 from simstack.models import simstack_model, StringData
 
-try:
-    from openbabel import openbabel as ob
-    from openbabel import pybel
-except ImportError as e:  # pragma: no cover - optional dependency
-    ob = None
-    pybel = None
-    _OPENBABEL_IMPORT_ERROR = e
-else:
-    _OPENBABEL_IMPORT_ERROR = None
+_openbabel_load_attempted = False
 
 # Default RMSD threshold (Angstrom) used when pruning OpenBabel conformers.
 _DEFAULT_PRUNE_RMS_THRESH = 0.1
+
+
+def _load_openbabel() -> None:
+    global ob, pybel, _OPENBABEL_IMPORT_ERROR, _openbabel_load_attempted
+    if _openbabel_load_attempted:
+        return
+    _openbabel_load_attempted = True
+    try:
+        from openbabel import openbabel as imported_ob
+        from openbabel import pybel as imported_pybel
+    except (ImportError, ValueError) as exc:
+        ob = None
+        pybel = None
+        _OPENBABEL_IMPORT_ERROR = exc
+        return
+    ob = imported_ob
+    pybel = imported_pybel
+    _OPENBABEL_IMPORT_ERROR = None
+
+
+def __getattr__(name: str):
+    if name not in {"ob", "pybel", "_OPENBABEL_IMPORT_ERROR"}:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    _load_openbabel()
+    return globals()[name]
 
 
 def _get_obabel_exe() -> Optional[str]:
@@ -41,6 +58,7 @@ def _get_obabel_exe() -> Optional[str]:
 
 
 def _require_openbabel() -> None:
+    _load_openbabel()
     if (ob is None or pybel is None) and _get_obabel_exe() is None:
         raise RuntimeError(
             "OpenBabel is not available in this environment. Install it first "
@@ -55,6 +73,7 @@ def _molecule_to_pybel(molecule: Molecule):
     The molecule is serialised to an XYZ block and read back through OpenBabel so
     that bonds are perceived from the 3D geometry.
     """
+    _load_openbabel()
     xyz_lines = [str(len(molecule.atoms)), molecule.smiles or ""]
     for atom in molecule.atoms:
         xyz_lines.append(f"{atom.element} {atom.x} {atom.y} {atom.z}")
@@ -64,6 +83,7 @@ def _molecule_to_pybel(molecule: Molecule):
 
 def _obmol_to_molecule(obmol, energy: float, smiles: Optional[str]) -> Molecule:
     """Convert a single OpenBabel ``OBMol`` conformer into a qm_models Molecule."""
+    _load_openbabel()
     new_molecule = Molecule()
     new_molecule.smiles = smiles
     for atom in ob.OBMolAtomIter(obmol):
