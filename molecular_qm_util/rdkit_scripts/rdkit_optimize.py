@@ -130,7 +130,8 @@ def rdkit_to_molecule(rdkit_mol: Chem.Mol, conf_id: int = 0, energy: Optional[fl
     return mol
 
 
-class RDKitParams:
+@simstack_model
+class RDKitParams(Model):
     """
     Parameters for RDKit optimization.
     """
