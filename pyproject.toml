@@ -3,6 +3,10 @@ name = "molecular_qm_util"
 dynamic = ["version"]
 description = "Molecular QM Utilities"
 requires-python = ">=3.12,<3.13"
+authors = [
+    { name = "Wolfgang Wenzel" },
+    { name = "Phillip Dullinger" },
+]
 dependencies = [
     "pubchempy",
     "cirpy",

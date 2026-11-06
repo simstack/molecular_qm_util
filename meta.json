@@ -1,0 +1,17 @@
+{
+  "title": "Molecular QM Utilities",
+  "workflow_environment": "SimStack",
+  "description": "SimStack utilities and nodes for molecular structure conversion, conformer generation, and molecular-mechanics scoring and geometry optimization with RDKit and Open Babel, including PubChem naming helpers.",
+  "authors": [
+    "Wolfgang Wenzel",
+    "Phillip Dullinger"
+  ],
+  "release": "v0.5.3",
+  "keywords": [
+    "SimStack",
+    "molecular modeling",
+    "RDKit",
+    "Open Babel",
+    "conformers"
+  ]
+}
